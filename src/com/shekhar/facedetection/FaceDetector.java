@@ -1,5 +1,8 @@
 package com.shekhar.facedetection;
 
+import java.awt.AlphaComposite;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -15,86 +18,83 @@ import org.opencv.core.Scalar;
 import org.opencv.highgui.Highgui;
 import org.opencv.objdetect.CascadeClassifier;
 
-import com.imdb.fetcher.DownloadPage;
-
 public class FaceDetector {
 
 	private CascadeClassifier faceDetector;
+
+	private final int IMG_WIDTH = 125;
+	private final int IMG_HEIGHT = 150;
+
+	public static final String storagePath = "/home/pratham/workspace/ImdbFetcher/images/";
 
 	public FaceDetector() {
 
 		System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
 
-		faceDetector = new CascadeClassifier(FaceDetector.class.getResource(
-				"haarcascade_frontalface_alt.xml").getPath());
+		faceDetector = new CascadeClassifier(
+				FaceDetector.class.getResource("haarcascade_frontalface_alt.xml").getPath());
 	}
 
 	public static void main(String[] args) {
 
 		FaceDetector detector = new FaceDetector();
-		Mat image = detector.fetchFaces("ouput_face_0.png");
-		String filename = "ouput.png";
-		System.out.println("Writing " + filename);
-		Highgui.imwrite(filename, image);
+
+		File directory = new File(storagePath);
+		String[] list = directory.list();
+		for (String fileName : list) {
+			try {
+				Mat image = detector.fetchFaces(fileName);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+		// String filename = "ouput.png";
+		// System.out.println("Writing " + filename);
+		// Highgui.imwrite(filename, image);
 	}
 
-	private Mat fetchFaces(String filePath) {
-		Mat image = Highgui.imread(FaceDetector.class.getResource(filePath)
-				.getPath());
+	private Mat fetchFaces(String fileName) {
+		Mat image = Highgui.imread(storagePath + "" + fileName);
 
 		MatOfRect faceDetections = new MatOfRect();
 		faceDetector.detectMultiScale(image, faceDetections);
-		System.out.println("Detected " + faceDetections.toArray().length
-				+ " faces");
+		System.out.println(fileName + " Detected " + faceDetections.toArray().length + " faces");
 		Rect[] array = faceDetections.toArray();
 
 		int count = 0;
 		for (Rect rect : array) {
-
-			String filename = "ouput_face_" + count++ + ".png";
-			Highgui.imwrite(filename, image);
-			cropImage(new File(filename), rect);
-			Core.rectangle(image, new Point(rect.x, rect.y), new Point(rect.x
-					+ rect.width, rect.y + rect.height), new Scalar(0, 255, 0));
+			String opFileName = fileName + "_" + count++ + ".png";
+			cropImage(new File(storagePath + fileName), rect, storagePath + "Faces/" + opFileName);
 		}
 
 		return image;
 	}
 
-	public void fetchFaces(String fileName, String filePath) {
-		Mat image = Highgui.imread(FaceDetector.class.getResource(filePath)
-				.getPath());
-
-		MatOfRect faceDetections = new MatOfRect();
-		faceDetector.detectMultiScale(image, faceDetections);
-		System.out.println("Detected " + faceDetections.toArray().length
-				+ " faces");
-		Rect[] array = faceDetections.toArray();
-
-		int count = 0;
-		for (Rect rect : array) {
-			String filename = DownloadPage.storagePath + "faces/" + fileName
-					+ "_" + count++ + ".png";
-			Highgui.imwrite(filename, image);
-			cropImage(new File(filename), rect);
-			Core.rectangle(image, new Point(rect.x, rect.y), new Point(rect.x
-					+ rect.width, rect.y + rect.height), new Scalar(0, 255, 0));
-		}
-	}
-
-	private static void cropImage(File img, Rect rect) {
+	private void cropImage(File inImg, Rect rect, String outputFileName) {
 		BufferedImage src;
 		try {
 
-			src = ImageIO.read(img);
-			BufferedImage dest = src.getSubimage(rect.x, rect.y, rect.width,
-					rect.height);
-			String filename = "ouput_face.png";
-			System.out.println("Writing " + filename);
-			ImageIO.write(dest, "png", img);
+			src = ImageIO.read(inImg);
+			BufferedImage dest = src.getSubimage(rect.x, rect.y, rect.width, rect.height);
+			System.out.println("Writing " + outputFileName);
+			ImageIO.write(dest, "png", new File(outputFileName));
+
+			int type = src.getType() == 0 ? BufferedImage.TYPE_INT_ARGB : src.getType();
+
+			BufferedImage resizedImage = new BufferedImage(IMG_WIDTH, IMG_HEIGHT, type);
+
+			Graphics2D g = resizedImage.createGraphics();
+			g.drawImage(src, 0, 0, IMG_WIDTH, IMG_HEIGHT, null);
+			g.dispose();
+			g.setComposite(AlphaComposite.Src);
+
+			g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+			g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+			ImageIO.write(dest, "png", new File(outputFileName + "_125_150"));
 
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}

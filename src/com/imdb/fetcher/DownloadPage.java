@@ -35,7 +35,7 @@ public class DownloadPage {
 
 	public static final boolean proxyReqd = true;
 
-	private static final String urlString = "http://www.imdb.com/title/tt3662066/?ref_=nm_flmg_act_4";
+	private static final String urlString = "http://www.imdb.com/title/tt4535650/";
 
 	public static final String storagePath = "/home/pratham/workspace/ImdbFetcher/images/";
 
